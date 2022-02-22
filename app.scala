@@ -51,7 +51,7 @@ trait sequenceDistance[A]{
 	def penaltyUp: Int
 	def select3(a: Int, b: Int, c: Int): Int
 	def penaltyBuilder(size:Int): Array[Int]
-	def Compute [B >: A, C>: A](s1: Array[B], s2: Array[C]): (Int, Option[Double]) ={
+	def Compute [B >: A, C>: A](s1: Array[B], s2: Array[C]): (Int, Option[Double], Int, Int) ={
 		val firstLineDistances = penaltyBuilder(s2.size)
 		val firstColumnDistances = penaltyBuilder(s1.size)
 		val seqAndDist = s1.zip(firstColumnDistances)
@@ -90,11 +90,14 @@ trait sequenceDistance[A]{
 		val result= seqAndDist.foldLeft((firstLineDistances, Array.fill(firstLineDistances.size)(0), Array.fill(firstLineDistances.size)(0)).zipped.toArray)((acc, item)=> (makeNewLine(acc, s2, item._2, item._1, if(acc(0)._1==0) 0 else item._2))) //l'if serve per il primissimo valore, quello in M[0,0]
 		
 		val p= if (result(s2.length-1)._2+result(s2.length-1)._3!=0) Some((result(s2.length-1)._3).toDouble/(result(s2.length-1)._2+result(s2.length-1)._3).toDouble) else None
-		(result(s2.length-1)._1, p);
+		(result(s2.length-1)._1, p, (result(s2.length-1)._3), (result(s2.length-1)._2)); //1: score, 2: p-distance, 3: sostituzioni, 4: corretti 
 	}
 	def Compare [B>: A, C>: A](m1: B, m2: C): Int
+
 	def Score[B >: A, C>: A](s1: Array[B], s2: Array[C]): Int ={Compute(s1, s2)._1}
 	def pDistance[B >: A, C>: A](s1: Array[B], s2: Array[C]): Option[Double]={Compute(s1, s2)._2}
+	def substitutions[B >: A, C>: A](s1: Array[B], s2: Array[C]): Int={Compute(s1, s2)._3}
+	def matching[B >: A, C>: A](s1: Array[B], s2: Array[C]): Int={Compute(s1, s2)._4}
 }
 
 class lDistance extends sequenceDistance[Char]{
@@ -150,8 +153,10 @@ object main{
 		
 		
 		// Calcolo parallelo delle distanze
+
 		
 		val ppairs = sc.parallelize(pairs)
+/*
 		val distances = ppairs.map((x)=>((x._1._1, x._2._1), x._1._2 match {
 			case None => 1.0
 			case Some(s1) => x._2._2 match {
@@ -166,7 +171,21 @@ object main{
 					}
 			}
 		})).collect().toMap;
-		
+*/
+
+		val distances = ppairs.map((x)=>((x._1._1, x._2._1), x._1._2 match {
+			case None => 1.0
+			case Some(s1) => x._2._2 match {
+				case None => 1.0
+				case Some(s2) => 
+					{
+						val ld = new lDistance;
+						ld.substitutions (s1, s2)
+					}
+			}
+		})).collect().toMap;
+
+
 		print(distances)
 		
 		//distances = Map((7,1) -> 0.0340485544474665, (7,5) -> 0.04287392983045157, (7,6) -> 0.03546718613555451, (5,0) -> 0.004233870967741936, (5,2) -> 0.010563498738435661, (7,4) -> 0.039741779301997175, (5,1) -> 0.01056976041876384, (4,0) -> 0.01908281538719973, (6,4) -> 0.011216710884239514, (3,1) -> 0.0017828310010764262, (6,1) -> 0.003658086384535356, (4,1) -> 0.009476124869787292, (6,2) -> 0.0032298220233489216, (2,0) -> 0.011415678879310345, (3,0) -> 0.01184866029352363, (6,5) -> 0.012515098644477252, (6,3) -> 0.003732723543060833, (7,3) -> 0.034229746558513685, (5,4) -> 0.01844200342638315, (3,2) -> 0.0017157852240613646, (4,2) -> 0.009224346889307837, (5,3) -> 0.010827896966843768, (2,1) -> 0.0016490543178299792, (4,3) -> 0.009792374735000168, (6,0) -> 0.013470388659343613, (7,2) -> 0.0340775162474324, (1,0) -> 0.01159624886558435, (7,0) -> 0.043454863446791336)
