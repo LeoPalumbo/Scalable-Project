@@ -109,11 +109,38 @@ class lDistance extends sequenceDistance[Char]{
 }
 
 class NeighbourJoining {
-  var r_i = new Array[Double](8)
-  var d_i_j = Map[(Int, Int), Double]()
 
-  def setR_I(distances: Map[(Int, Int), Double]): Unit ={
-    for (j <- 0 until 8) {
+
+  var r_i = Array[Double](8)
+  var distances = Map[(Int, Int), Double]()
+  var d_i_j = Map[(Int, Int), Double]()
+  var graph = Map[(Int, Int), Double]()
+  var numOfNode: Int = 0
+  var last_node: Int = 0
+
+  def init(d: Map[(Int, Int), Double]): Unit = {
+    for ((k,v) <- d) {
+      distances += ((k._1, k._2) -> v)
+      distances += ((k._2, k._1) -> v)
+    }
+
+    numOfNode = distances.max._1._1 + 1
+    last_node = numOfNode
+    r_i = new Array[Double](numOfNode)
+
+    for (i <- 0 until numOfNode) {
+      distances += ((i, i) -> 0)
+    }
+  }
+  def setR_I(): Unit ={
+    for (i <- 0 until numOfNode) {
+      var tmp : Double = 0.0
+      for (j <- 0 until numOfNode) {
+        tmp = tmp + distances.getOrElse((i, j), 0.0)
+      }
+      r_i(i) = tmp/(numOfNode-2)
+    }
+    /*for (j <- 0 until 8) {
       var tmp = 0.0
       for (z <- j until 8) {
         tmp = tmp + distances.getOrElse((z, j), 0.0)
@@ -122,12 +149,121 @@ class NeighbourJoining {
         tmp = tmp + distances.getOrElse((j, i), 0.0)
       }
       r_i(j) = tmp;
-    }
+    }*/
   }
-  def setD_I_J(distances: Map[(Int, Int), Double]): Unit ={
-    for ((k,v) <- distances) {
+  def setD_I_J(): Unit ={
+    var tmpSuperiorMatrix = Map[(Int, Int), Double]()
+    for ((k, v) <- distances) {
+      //if(!tmpSuperiorMatrix.exists(_._1 == (k._2, k._1)) && k._1 != k._2) {
+      if(k._1 > k._2) {
+        tmpSuperiorMatrix += ((k._1, k._2) -> v)
+      }
+    }
+    for ((k,v) <- tmpSuperiorMatrix) {
       d_i_j += ((k._1, k._2) -> (v - r_i(k._1) - r_i(k._2)))
     }
+  }
+
+  def joinSmallestNodes(): Unit ={
+    val min = d_i_j.filter(x => x._2 == d_i_j.valuesIterator.min)
+    println("Valore minimo")
+    println(min)
+    val node_1 : Int = min.keys.head._1
+    val node_2 : Int = min.keys.head._2
+    println("Nodi")
+    println(node_1)
+    println(node_2)
+    val dist_node1: Double = 0.5 * distances(node_1, node_2) + 0.5 * (r_i(node_1) - r_i(node_2))
+    val dist_node2: Double = 0.5 * distances(node_1, node_2) + 0.5 * (r_i(node_2) - r_i(node_1))
+    graph += ((node_1, last_node) -> dist_node1)
+    graph += ((node_2, last_node) -> dist_node2)
+    updateMatrix(node_1, node_2)
+    last_node = last_node + 1
+  }
+
+  def updateMatrix(node_1: Int, node_2: Int): Unit ={
+    var i : Int = 0
+    var j : Int = 0
+    if(node_1 > node_2) {
+      i = node_1
+      j = node_2
+    } else {
+      i = node_2
+      j = node_1
+    }
+    //println(i)
+    //println(j)
+    // 1. rimuovo tutti i valori di (node_1, key_2) (key_2, node_1) (key_2, node_2) (node_2, key_2)
+    /*var tmpMatrix = distances
+    for ((k,v) <- distances) {
+      if (k._1 == i || k._1 == j || k._2 == i || k._2 == j){
+        tmpMatrix = tmpMatrix.-((i, j))
+      }
+    }*/
+    var tmpMatrix = distances.filter(x => (x._1 != i && x._2 != i))
+    tmpMatrix = tmpMatrix.-((i, i))
+    for ((k, v) <- tmpMatrix) {
+      if (k._1 > k._2 && k._1 == j) {
+        //println(distances(i, k._2))
+        println("Ciao")
+        println(k._2)
+        val newVal = (distances(i, k._2) + distances(j, k._2) - distances(i, j)) / 2
+        //val newVal = 0.5 * distances(i, k._2) + 0.5 * (r_i(i) - r_i(k._2))
+        tmpMatrix += ((last_node, k._2) -> newVal)
+        tmpMatrix += ((k._2, last_node) -> newVal)
+        tmpMatrix = tmpMatrix.-((i, k._1))
+        tmpMatrix = tmpMatrix.-((k._1, i))
+        tmpMatrix = tmpMatrix.-((j, k._1))
+        tmpMatrix = tmpMatrix.-((k._1, j))
+        tmpMatrix = tmpMatrix.-((i, k._2))
+        tmpMatrix = tmpMatrix.-((k._2, i))
+        tmpMatrix = tmpMatrix.-((j, k._2))
+        tmpMatrix = tmpMatrix.-((k._2, j))
+      }
+    }
+
+    //tmpMatrix = tmpMatrix.-((i, j))
+    //tmpMatrix = tmpMatrix.-((j, i))
+    /*for((k,v) <- tmpMatrix) {
+      if (k._1 == i && k._2 != j) {
+        // 1.1 rimuovo quel valore
+        tmpMatrix = tmpMatrix.-(k)
+        // 1.2 inserisco un nuovo valore in (k._1, node_2)
+        /*var newVal: Double = 0
+        if(i > k._2) {
+          if(j > k._2) {
+            newVal = (d_i_j(i, k._2) + d_i_j(j, k._2) - d_i_j(i, j)) / 2
+          }else if (j < k._2) {
+            newVal = (d_i_j(i, k._2) + d_i_j(k._2, j) - d_i_j(i, j)) / 2
+          }
+        } else if (i < k._2) {
+          newVal = (d_i_j(k._2, i) + d_i_j(k._2, j) - d_i_j(i, j)) / 2
+        }
+        tmpMatrix += ((last_node, j) -> newVal)
+        tmpMatrix += ((i, last_node) -> newVal)
+      */
+      } else if (k._1 != i && k._2 == j) {
+        // 1.1 rimuovo quel valore
+        tmpMatrix = tmpMatrix.-(k)
+        // 1.2 inserisco un nuovo valore in (k._1, node_2)
+        var newVal: Double = 0
+        if(i > k._1) {
+          if(j > k._1) {
+            newVal = (d_i_j(i, k._1) + d_i_j(j, k._1) - d_i_j(i, j)) / 2
+          }else if (j < k._1){
+            newVal = (d_i_j(i, k._1) + d_i_j(k._1, j) - d_i_j(i, j)) / 2
+          }
+        } else if (i < k._1) {
+          newVal = (d_i_j(k._1, i) + d_i_j(k._1, j) - d_i_j(i, j)) / 2
+        }
+        tmpMatrix += ((last_node, j) -> newVal)
+        tmpMatrix += ((i, last_node) -> newVal)
+      }
+    }*/
+    distances = tmpMatrix
+
+    // 2. carico, nella matrice superiore i valori con key (last_node, key_2) oppure (key_2, last_node)
+
   }
 }
 
@@ -150,7 +286,7 @@ object main{
 
     val sc = new SparkContext(conf)
 
-    val files = new java.io.File("dataset").listFiles.filter(_.getName.endsWith(".fasta")).map((x)=>"dataset/"+x.getName)
+    /*val files = new java.io.File("dataset").listFiles.filter(_.getName.endsWith(".fasta")).map((x)=>"dataset/"+x.getName)
 
     val names = files.map((x)=> new FastaReader(x).next()._1)zip(0 until files.size)
     val sequences = files.map((x)=> new NucleotideSequence(x).read(0))
@@ -208,15 +344,53 @@ object main{
       }
     })).collect().toMap;
 
-
-    println(distances)
+    */
+    //println(distances)
+    val dist : Map[(Int, Int), Double] = Map((3,2) -> 3, (3,1) -> 3, (3,0) -> 3, (2,1) -> 2, (2,0) -> 2, (1,0) -> 1)
     //println(distances.size)
     //distances = Map((7,1) -> 0.0340485544474665, (7,5) -> 0.04287392983045157, (7,6) -> 0.03546718613555451, (5,0) -> 0.004233870967741936, (5,2) -> 0.010563498738435661, (7,4) -> 0.039741779301997175, (5,1) -> 0.01056976041876384, (4,0) -> 0.01908281538719973, (6,4) -> 0.011216710884239514, (3,1) -> 0.0017828310010764262, (6,1) -> 0.003658086384535356, (4,1) -> 0.009476124869787292, (6,2) -> 0.0032298220233489216, (2,0) -> 0.011415678879310345, (3,0) -> 0.01184866029352363, (6,5) -> 0.012515098644477252, (6,3) -> 0.003732723543060833, (7,3) -> 0.034229746558513685, (5,4) -> 0.01844200342638315, (3,2) -> 0.0017157852240613646, (4,2) -> 0.009224346889307837, (5,3) -> 0.010827896966843768, (2,1) -> 0.0016490543178299792, (4,3) -> 0.009792374735000168, (6,0) -> 0.013470388659343613, (7,2) -> 0.0340775162474324, (1,0) -> 0.01159624886558435, (7,0) -> 0.043454863446791336)
 
     val neighbourJoining = new NeighbourJoining()
-    neighbourJoining.setR_I(distances)
-    //neighbourJoining.r_i.foreach(println)
-    neighbourJoining.setD_I_J(distances)
+    neighbourJoining.init(dist)
+    println("Matrix " + neighbourJoining.distances)
+    println("Num of nodes " + neighbourJoining.numOfNode)
+    neighbourJoining.setR_I()
+    println("ri ")
+    neighbourJoining.r_i.foreach(println)
+
+    neighbourJoining.setD_I_J()
+    println()
+    println("d_i_j")
+    neighbourJoining.d_i_j.foreach(println)
+    //println(neighbourJoining.d_i_j.size)
+
+    neighbourJoining.joinSmallestNodes()
+    println("Nuova matrice da passare alla chiamata ricorsiva")
+    println(neighbourJoining.distances)
+    println(neighbourJoining.distances.size)
+    println("Grafo fino ad ora")
+    println(neighbourJoining.graph)
+    return
+
+    //println(min)
+    //println(min.keys)
+    //println(min.keys.head._1)
+    //println(min.keys.head._2)
+    //println(min.keys.toSeq)
+    //neighbourJoining.calculateBranchLength(min.keys.take(1))
+    val vertices = neighbourJoining.d_i_j.toSeq
+    println(vertices)
+    val vertexMap = (0 until vertices.size)
+      .map(i => vertices(i) -> i.toLong)
+      .toMap
+    println(vertexMap)
+
+    // TODO: fare matrice completa
+    /*val edgeSet = neighbourJoining.d_i_j
+      .filter(_.size >1) // with only one vertex, this is not a path
+      .flatMap(list => list.indices.tail.map( i => list(i-1) -> list(i)))
+      .map(x => Edge(vertexMap(x._1), vertexMap(x._2), "1"))
+      .toSet*/
     //neighbourJoining.d_i_j.foreach(println)
     /*for (el <- distances){
       println(el._1)
