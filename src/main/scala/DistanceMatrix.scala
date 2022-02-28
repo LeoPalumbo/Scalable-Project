@@ -119,19 +119,21 @@ class NeighbourJoining {
   var numOfNodeTmp : Int = 0
   var last_node: Int = 0
 
-
-   \*
-   def NJ:
+  //var updateMatrix: Bool = false
+  \*
+   def NJ():
        if(terminationCond) // get only one value in the matrix
             break;
 
        // recursive
-       if(notFisrtTime)
+       if(firstUpdate)
             updateMatrix()
 
        setR_I()
        setD_I_J()
        joinSmallestNodes() //remove updateMatrix here
+
+       firstUpdate = true
 
        NJ() // recursive call
 
@@ -139,7 +141,7 @@ class NeighbourJoining {
    main:
         // compute the distance map
         init_NJ()
-        NJ()
+        NJ(false)
    *\
 
 
