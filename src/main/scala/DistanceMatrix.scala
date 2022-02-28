@@ -111,7 +111,7 @@ class lDistance extends sequenceDistance[Char]{
 
 class NeighbourJoining {
 
-  var r_i = Array[Double](8)
+  var r_i = Map[Int, Double]()
   var distances = Map[(Int, Int), Double]()
   var d_i_j = Map[(Int, Int), Double]()
   var graph = Map[(Int, Int), Double]()
@@ -120,7 +120,7 @@ class NeighbourJoining {
   var last_node: Int = 0
 
   //var updateMatrix: Bool = false
-  \*
+  /*
    def NJ():
        if(terminationCond) // get only one value in the matrix
             break;
@@ -142,7 +142,7 @@ class NeighbourJoining {
         // compute the distance map
         init_NJ()
         NJ(false)
-   *\
+   */
 
 
 
@@ -158,7 +158,6 @@ class NeighbourJoining {
     numOfNodeTmp = distances.max._1._1 + 1
 
     last_node = numOfNode
-    r_i = new Array[Double](numOfNode)
 
     // init r_i can be half of that? |r_i| = num_seq
     for (i <- 0 until numOfNode) {
@@ -168,13 +167,15 @@ class NeighbourJoining {
 
 
   def setR_I(): Unit ={
-    numOfNodeTmp = distances.max._1._1 + 1
-    for (i <- 0 until numOfNodeTmp) {
-      var tmp : Double = 0.0
-      for (j <- 0 until numOfNodeTmp) {
-        tmp = tmp + distances.getOrElse((i, j), 0.0)
+    for ((k, v) <- distances) {
+      if(r_i.contains(k._1)) {
+        r_i += (k._1 -> (r_i.getOrElse(k._1, 0.0) + v))
+      } else {
+        r_i += (k._1 -> (0.0 + v))
       }
-      r_i(i) = tmp/(numOfNodeTmp-2)
+    }
+    for((k, v) <- r_i) {
+      r_i += (k -> v/(numOfNode - 2))
     }
   }
 
@@ -207,7 +208,7 @@ class NeighbourJoining {
   }
 
   def updateMatrix(node_1: Int, node_2: Int): Unit ={
-    val i : Int = scala.math.max(node_1, node_2)
+    /*val i : Int = scala.math.max(node_1, node_2)
     val j : Int = scala.math.min(node_1, node_2)
 
     println(i)
@@ -236,6 +237,24 @@ class NeighbourJoining {
     }
 
     tmpMatrix += ((numOfNodeTmp - 2, numOfNodeTmp - 2) -> 0.0)
+
+    distances = tmpMatrix*/
+
+    var tmpMatrix = distances
+
+
+    for ((k, v) <- tmpMatrix){
+      if(k._1 == node_1 || k._2 == node_1 || k._1 == node_2 || k._2 == node_2)
+      tmpMatrix = tmpMatrix.-((k))
+    }
+
+    for ((k, v) <- tmpMatrix){
+      val newVal = (distances(k._1, node_1) + distances(k._1, node_2) - distances(node_1, node_2)) / 2
+      tmpMatrix = tmpMatrix.+((k._1, last_node) -> newVal)
+      tmpMatrix = tmpMatrix.+((last_node, k._1) -> newVal)
+    }
+
+    tmpMatrix = tmpMatrix.+((last_node, last_node) -> 0.0)
 
     distances = tmpMatrix
   }
@@ -320,7 +339,7 @@ object main{
 
     */
     //println(distances)
-    var dist : Map[(Int, Int), Double] = Map((3,2) -> 3, (3,1) -> 3, (3,0) -> 3, (2,1) -> 2, (2,0) -> 2, (1,0) -> 1)
+    var dist : Map[(Int, Int), Double] = Map((3,2) -> 14, (3,1) -> 18, (3,0) -> 27, (2,1) -> 12, (2,0) -> 21, (1,0) -> 17)
     //println(distances.size)
     //distances = Map((7,1) -> 0.0340485544474665, (7,5) -> 0.04287392983045157, (7,6) -> 0.03546718613555451, (5,0) -> 0.004233870967741936, (5,2) -> 0.010563498738435661, (7,4) -> 0.039741779301997175, (5,1) -> 0.01056976041876384, (4,0) -> 0.01908281538719973, (6,4) -> 0.011216710884239514, (3,1) -> 0.0017828310010764262, (6,1) -> 0.003658086384535356, (4,1) -> 0.009476124869787292, (6,2) -> 0.0032298220233489216, (2,0) -> 0.011415678879310345, (3,0) -> 0.01184866029352363, (6,5) -> 0.012515098644477252, (6,3) -> 0.003732723543060833, (7,3) -> 0.034229746558513685, (5,4) -> 0.01844200342638315, (3,2) -> 0.0017157852240613646, (4,2) -> 0.009224346889307837, (5,3) -> 0.010827896966843768, (2,1) -> 0.0016490543178299792, (4,3) -> 0.009792374735000168, (6,0) -> 0.013470388659343613, (7,2) -> 0.0340775162474324, (1,0) -> 0.01159624886558435, (7,0) -> 0.043454863446791336)
 
@@ -330,7 +349,7 @@ object main{
     println("Size: " + neighbourJoining.distances.size)
     println("Num of nodes " + neighbourJoining.numOfNode)
     neighbourJoining.setR_I()
-
+    println(neighbourJoining.r_i)
     neighbourJoining.setD_I_J()
 
     neighbourJoining.joinSmallestNodes()
@@ -352,6 +371,11 @@ object main{
     println(neighbourJoining.graph)
 
 
+    println(neighbourJoining.distances)
+
+    neighbourJoining.graph += ((neighbourJoining.last_node - 1, neighbourJoining.last_node - 2) -> neighbourJoining.distances(neighbourJoining.last_node - 1, neighbourJoining.last_node - 2))
+
+    println(neighbourJoining.graph)
     /*while (neighbourJoining.distances.size > 4) {
       dist = neighbourJoining.distances
     }*/
