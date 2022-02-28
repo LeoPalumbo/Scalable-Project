@@ -119,7 +119,34 @@ class NeighbourJoining {
   var numOfNodeTmp : Int = 0
   var last_node: Int = 0
 
+
+   \*
+   def NJ:
+       if(terminationCond) // get only one value in the matrix
+            break;
+
+       // recursive
+       if(notFisrtTime)
+            updateMatrix()
+
+       setR_I()
+       setD_I_J()
+       joinSmallestNodes() //remove updateMatrix here
+
+       NJ() // recursive call
+
+
+   main:
+        // compute the distance map
+        init_NJ()
+        NJ()
+   *\
+
+
+
+
   def init(d: Map[(Int, Int), Double]): Unit = {
+    // make matrix communative
     for ((k,v) <- d) {
       distances += ((k._1, k._2) -> v)
       distances += ((k._2, k._1) -> v)
@@ -131,10 +158,13 @@ class NeighbourJoining {
     last_node = numOfNode
     r_i = new Array[Double](numOfNode)
 
+    // init r_i can be half of that? |r_i| = num_seq
     for (i <- 0 until numOfNode) {
       distances += ((i, i) -> 0)
     }
   }
+
+
   def setR_I(): Unit ={
     numOfNodeTmp = distances.max._1._1 + 1
     for (i <- 0 until numOfNodeTmp) {
@@ -145,6 +175,8 @@ class NeighbourJoining {
       r_i(i) = tmp/(numOfNodeTmp-2)
     }
   }
+
+
   def setD_I_J(): Unit ={
     d_i_j = Map[(Int, Int), Double]()
     var tmpSuperiorMatrix = Map[(Int, Int), Double]()
