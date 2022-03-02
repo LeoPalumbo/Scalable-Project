@@ -174,15 +174,20 @@ class NeighbourJoining {
         r_i += (k._1 -> (0.0 + v))
       }
     }
-    for((k, v) <- r_i) {
-      r_i += (k -> v/(numOfNode - 2))
-    }
+//    for((k, v) <- r_i) {
+//      r_i += (k -> v/(numOfNode - 2))
+//    }
+
+    r_i=r_i.mapValues(x=> x/(numOfNode - 2))
+
+
   }
 
 
   def setD_I_J(): Unit ={
     d_i_j = Map[(Int, Int), Double]()
-    var tmpSuperiorMatrix = Map[(Int, Int), Double]()
+    val tmpSuperiorMatrix = distances.filterKeys(k=> k._1>k._2)
+    /*var tmpSuperiorMatrix = Map[(Int, Int), Double]()
     for ((k, v) <- distances) {
       if(k._1 > k._2) {
         tmpSuperiorMatrix += ((k._1, k._2) -> v)
@@ -190,14 +195,15 @@ class NeighbourJoining {
     }
     for ((k,v) <- tmpSuperiorMatrix) {
       d_i_j += ((k._1, k._2) -> (v - r_i(k._1) - r_i(k._2)))
-    }
+    }*/
+    d_i_j = tmpSuperiorMatrix.transform((k, v) => v - r_i(k._1) - r_i(k._2))
   }
 
   def joinSmallestNodes(): Unit ={
-    val min = d_i_j.filter(x => x._2 == d_i_j.valuesIterator.min)
+    val min = d_i_j.minBy(_._2)
 
-    val node_1 : Int = min.keys.head._1
-    val node_2 : Int = min.keys.head._2
+    val node_1 : Int = min._1._1
+    val node_2 : Int = min._1._2
 
     val dist_node1: Double = 0.5 * distances(node_1, node_2) + 0.5 * (r_i(node_1) - r_i(node_2))
     val dist_node2: Double = 0.5 * distances(node_1, node_2) + 0.5 * (r_i(node_2) - r_i(node_1))
@@ -242,11 +248,13 @@ class NeighbourJoining {
 
     var tmpMatrix = distances
 
-
+    /*
     for ((k, v) <- tmpMatrix){
       if(k._1 == node_1 || k._2 == node_1 || k._1 == node_2 || k._2 == node_2)
       tmpMatrix = tmpMatrix.-((k))
     }
+    */
+    tmpMatrix = tmpMatrix.filterKeys(k => k._1 != node_1 && k._1 != node_2 && k._2 != node_1 && k._2 != node_2)
 
     for ((k, v) <- tmpMatrix){
       val newVal = (distances(k._1, node_1) + distances(k._1, node_2) - distances(node_1, node_2)) / 2
