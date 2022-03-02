@@ -119,30 +119,6 @@ class NeighbourJoining {
   var numOfNodeTmp : Int = 0
   var last_node: Int = 0
 
-  //var updateMatrix: Bool = false
-  /*
-   def NJ():
-       if(terminationCond) // get only one value in the matrix
-            break;
-
-       // recursive
-       if(firstUpdate)
-            updateMatrix()
-
-       setR_I()
-       setD_I_J()
-       joinSmallestNodes() //remove updateMatrix here
-
-       firstUpdate = true
-
-       NJ() // recursive call
-
-
-   main:
-        // compute the distance map
-        init_NJ()
-        NJ()
-   */
   def NJ() : Unit = {
     var n : (Int, Int) = (0, 0)
     for (_ <- 0 until (numOfSeq - 2)){
@@ -153,9 +129,6 @@ class NeighbourJoining {
     }
     graph += ((last_node - 1, last_node - 2) -> distances.filterKeys(k=> k._1!=k._2).head._2)
   }
-
-
-
 
 
   def init(d: Map[(Int, Int), Double]): Unit = {
@@ -185,9 +158,6 @@ class NeighbourJoining {
         r_i += (k._1 -> (0.0 + v))
       }
     }
-//    for((k, v) <- r_i) {
-//      r_i += (k -> v/(numOfNode - 2))
-//    }
 
     r_i=r_i.mapValues(x=> x/(numOfSeq - 2))
 
@@ -199,18 +169,7 @@ class NeighbourJoining {
     d_i_j = Map[(Int, Int), Double]()
     var tmpMatrixDist: Map[(Int, Int), Double] = Map()
     tmpMatrixDist++=distances
-
     val tmpSuperiorMatrix = tmpMatrixDist.filterKeys(k=> k._1>k._2)
-
-    /*var tmpSuperiorMatrix = Map[(Int, Int), Double]()
-    for ((k, v) <- distances) {
-      if(k._1 > k._2) {
-        tmpSuperiorMatrix += ((k._1, k._2) -> v)
-      }
-    }
-    for ((k,v) <- tmpSuperiorMatrix) {
-      d_i_j += ((k._1, k._2) -> (v - r_i(k._1) - r_i(k._2)))
-    }*/
     d_i_j = tmpSuperiorMatrix.transform((k, v) => v - r_i(k._1) - r_i(k._2))
   }
 
@@ -229,46 +188,9 @@ class NeighbourJoining {
   }
 
   def updateMatrix(node_1: Int, node_2: Int): Unit ={
-    /*val i : Int = scala.math.max(node_1, node_2)
-    val j : Int = scala.math.min(node_1, node_2)
-
-    println(i)
-    println(j)
-    var tmpMatrix = distances.filter(x => (x._1 != i && x._2 != i))
-    tmpMatrix = tmpMatrix.-((i, i))
-    for ((k, v) <- tmpMatrix) {
-      if (k._1 == j) {
-        if (k._1 > k._2) {
-
-          tmpMatrix = tmpMatrix.-((i, k._1))
-          tmpMatrix = tmpMatrix.-((k._1, i))
-          tmpMatrix = tmpMatrix.-((j, k._1))
-          tmpMatrix = tmpMatrix.-((k._1, j))
-          tmpMatrix = tmpMatrix.-((i, k._2))
-          tmpMatrix = tmpMatrix.-((k._2, i))
-          tmpMatrix = tmpMatrix.-((j, k._2))
-          tmpMatrix = tmpMatrix.-((k._2, j))
-
-          val newVal = (distances(i, k._2) + distances(j, k._2) - distances(i, j)) / 2
-
-          tmpMatrix += ((numOfNodeTmp - 2, k._2) -> newVal)
-          tmpMatrix += ((k._2, numOfNodeTmp - 2) -> newVal)
-        }
-      }
-    }
-
-    tmpMatrix += ((numOfNodeTmp - 2, numOfNodeTmp - 2) -> 0.0)
-
-    distances = tmpMatrix*/
 
     var tmpMatrix = distances
 
-    /*
-    for ((k, v) <- tmpMatrix){
-      if(k._1 == node_1 || k._2 == node_1 || k._1 == node_2 || k._2 == node_2)
-      tmpMatrix = tmpMatrix.-((k))
-    }
-    */
     tmpMatrix = tmpMatrix.filterKeys(k => k._1 != node_1 && k._1 != node_2 && k._2 != node_1 && k._2 != node_2)
     println(distances)
 
@@ -288,19 +210,6 @@ class NeighbourJoining {
 object main{
   def main(argv: Array[String]){
     val conf = new SparkConf().setAppName("Phylogenetic Tree").setMaster("local[*]")
-
-    /*
-    conf.set("spark.executor.instances", "4")
-    conf.set("spark.executor.cores", "4")
-    */
-
-    /*
-    conf.set("spark.dynamicAllocation.enabled", "true")
-    conf.set("spark.executor.cores", "4")
-    conf.set("spark.dynamicAllocation.minExecutors","1")
-    conf.set("spark.dynamicAllocation.maxExecutors","16")
-    */
-
     val sc = new SparkContext(conf)
 
     /*val files = new java.io.File("dataset").listFiles.filter(_.getName.endsWith(".fasta")).map((x)=>"dataset/"+x.getName)
@@ -357,76 +266,12 @@ object main{
     */
     //println(distances)
     var dist : Map[(Int, Int), Double] = Map((3,2) -> 14, (3,1) -> 18, (3,0) -> 27, (2,1) -> 12, (2,0) -> 21, (1,0) -> 17)
-    //println(distances.size)
-    //distances = Map((7,1) -> 0.0340485544474665, (7,5) -> 0.04287392983045157, (7,6) -> 0.03546718613555451, (5,0) -> 0.004233870967741936, (5,2) -> 0.010563498738435661, (7,4) -> 0.039741779301997175, (5,1) -> 0.01056976041876384, (4,0) -> 0.01908281538719973, (6,4) -> 0.011216710884239514, (3,1) -> 0.0017828310010764262, (6,1) -> 0.003658086384535356, (4,1) -> 0.009476124869787292, (6,2) -> 0.0032298220233489216, (2,0) -> 0.011415678879310345, (3,0) -> 0.01184866029352363, (6,5) -> 0.012515098644477252, (6,3) -> 0.003732723543060833, (7,3) -> 0.034229746558513685, (5,4) -> 0.01844200342638315, (3,2) -> 0.0017157852240613646, (4,2) -> 0.009224346889307837, (5,3) -> 0.010827896966843768, (2,1) -> 0.0016490543178299792, (4,3) -> 0.009792374735000168, (6,0) -> 0.013470388659343613, (7,2) -> 0.0340775162474324, (1,0) -> 0.01159624886558435, (7,0) -> 0.043454863446791336)
 
     val neighbourJoining = new NeighbourJoining()
     neighbourJoining.init(dist)
-    /*println("Matrix " + neighbourJoining.distances)
-    println("Size: " + neighbourJoining.distances.size)
-    println("Num of nodes " + neighbourJoining.numOfSeq)
-    neighbourJoining.setR_I()
-    println(neighbourJoining.r_i)
-    neighbourJoining.setD_I_J()
 
-    neighbourJoining.joinSmallestNodes()
-    println("Nuova matrice da passare alla chiamata ricorsiva")
-    println(neighbourJoining.distances)
-    println(neighbourJoining.distances.size)
-    println("Grafo fino ad ora")
-    println(neighbourJoining.graph)
-
-    neighbourJoining.setR_I()
-
-    neighbourJoining.setD_I_J()
-    neighbourJoining.joinSmallestNodes()
-    println("Nuova matrice da passare alla chiamata ricorsiva")
-    println(neighbourJoining.distances)
-    println(neighbourJoining.distances.size)
-    println(neighbourJoining.numOfSeq)
-    println("Grafo fino ad ora")
-    println(neighbourJoining.graph)
-
-
-    println(neighbourJoining.distances)
-
-    neighbourJoining.graph += ((neighbourJoining.last_node - 1, neighbourJoining.last_node - 2) -> neighbourJoining.distances(neighbourJoining.last_node - 1, neighbourJoining.last_node - 2))
-
-    println(neighbourJoining.graph)*/
-    /*while (neighbourJoining.distances.size > 4) {
-      dist = neighbourJoining.distances
-    }*/
 
     neighbourJoining.NJ()
     println(neighbourJoining.graph)
-    return
-
-    //println(min)
-    //println(min.keys)
-    //println(min.keys.head._1)
-    //println(min.keys.head._2)
-    //println(min.keys.toSeq)
-    //neighbourJoining.calculateBranchLength(min.keys.take(1))
-    val vertices = neighbourJoining.d_i_j.toSeq
-    println(vertices)
-    val vertexMap = (0 until vertices.size)
-      .map(i => vertices(i) -> i.toLong)
-      .toMap
-    println(vertexMap)
-
-    // TODO: fare matrice completa
-    /*val edgeSet = neighbourJoining.d_i_j
-      .filter(_.size >1) // with only one vertex, this is not a path
-      .flatMap(list => list.indices.tail.map( i => list(i-1) -> list(i)))
-      .map(x => Edge(vertexMap(x._1), vertexMap(x._2), "1"))
-      .toSet*/
-    //neighbourJoining.d_i_j.foreach(println)
-    /*for (el <- distances){
-      println(el._1)
-      println(el._2)
-    }
-    println(distances.get((7,1)))
-    */
-
-  }
+ }
 }
