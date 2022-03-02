@@ -115,7 +115,7 @@ class NeighbourJoining {
   var distances = Map[(Int, Int), Double]()
   var d_i_j = Map[(Int, Int), Double]()
   var graph = Map[(Int, Int), Double]()
-  var numOfNode: Int = 0
+  var numOfSeq: Int = 0
   var numOfNodeTmp : Int = 0
   var last_node: Int = 0
 
@@ -141,8 +141,19 @@ class NeighbourJoining {
    main:
         // compute the distance map
         init_NJ()
-        NJ(false)
+        NJ()
    */
+  def NJ() : Unit = {
+    var n : (Int, Int) = (0, 0)
+    for (_ <- 0 until (numOfSeq - 2)){
+      setR_I()
+      setD_I_J()
+      n = joinSmallestNodes() //remove updateMatrix here
+      updateMatrix(n._1, n._2)
+    }
+    graph += ((last_node - 1, last_node - 2) -> distances.filterKeys(k=> k._1!=k._2).head._2)
+  }
+
 
 
 
@@ -154,13 +165,13 @@ class NeighbourJoining {
       distances += ((k._2, k._1) -> v)
     }
 
-    numOfNode = distances.max._1._1 + 1
+    numOfSeq = distances.max._1._1 + 1
     numOfNodeTmp = distances.max._1._1 + 1
 
-    last_node = numOfNode
+    last_node = numOfSeq
 
     // init r_i can be half of that? |r_i| = num_seq
-    for (i <- 0 until numOfNode) {
+    for (i <- 0 until numOfSeq) {
       distances += ((i, i) -> 0)
     }
   }
@@ -178,7 +189,7 @@ class NeighbourJoining {
 //      r_i += (k -> v/(numOfNode - 2))
 //    }
 
-    r_i=r_i.mapValues(x=> x/(numOfNode - 2))
+    r_i=r_i.mapValues(x=> x/(numOfSeq - 2))
 
 
   }
@@ -186,7 +197,11 @@ class NeighbourJoining {
 
   def setD_I_J(): Unit ={
     d_i_j = Map[(Int, Int), Double]()
-    val tmpSuperiorMatrix = distances.filterKeys(k=> k._1>k._2)
+    var tmpMatrixDist: Map[(Int, Int), Double] = Map()
+    tmpMatrixDist++=distances
+
+    val tmpSuperiorMatrix = tmpMatrixDist.filterKeys(k=> k._1>k._2)
+
     /*var tmpSuperiorMatrix = Map[(Int, Int), Double]()
     for ((k, v) <- distances) {
       if(k._1 > k._2) {
@@ -199,7 +214,7 @@ class NeighbourJoining {
     d_i_j = tmpSuperiorMatrix.transform((k, v) => v - r_i(k._1) - r_i(k._2))
   }
 
-  def joinSmallestNodes(): Unit ={
+  def joinSmallestNodes(): (Int, Int) ={
     val min = d_i_j.minBy(_._2)
 
     val node_1 : Int = min._1._1
@@ -209,8 +224,8 @@ class NeighbourJoining {
     val dist_node2: Double = 0.5 * distances(node_1, node_2) + 0.5 * (r_i(node_2) - r_i(node_1))
     graph += ((node_1, last_node) -> dist_node1)
     graph += ((node_2, last_node) -> dist_node2)
-    updateMatrix(node_1, node_2)
     last_node = last_node + 1
+    (node_1, node_2)
   }
 
   def updateMatrix(node_1: Int, node_2: Int): Unit ={
@@ -255,6 +270,7 @@ class NeighbourJoining {
     }
     */
     tmpMatrix = tmpMatrix.filterKeys(k => k._1 != node_1 && k._1 != node_2 && k._2 != node_1 && k._2 != node_2)
+    println(distances)
 
     for ((k, v) <- tmpMatrix){
       val newVal = (distances(k._1, node_1) + distances(k._1, node_2) - distances(node_1, node_2)) / 2
@@ -291,13 +307,6 @@ object main{
 
     val names = files.map((x)=> new FastaReader(x).next()._1)zip(0 until files.size)
     val sequences = files.map((x)=> new NucleotideSequence(x).read(0))
-
-
-    //		val pArr1= sc.parallelize(Array('c', 'a', 'e'));
-    //		val pArr2= sc.parallelize(Array('c', 'a', 'n', 'e'));
-
-    //		val result = ld.Compute(Array('c', 'a', 'e'), Array('c', 'a', 'i', 'e'))
-    //		val resultSpark = ldSpark.Compute(pArr1, pArr2)
 
     println(files(0))
     println(names(0))
@@ -353,9 +362,9 @@ object main{
 
     val neighbourJoining = new NeighbourJoining()
     neighbourJoining.init(dist)
-    println("Matrix " + neighbourJoining.distances)
+    /*println("Matrix " + neighbourJoining.distances)
     println("Size: " + neighbourJoining.distances.size)
-    println("Num of nodes " + neighbourJoining.numOfNode)
+    println("Num of nodes " + neighbourJoining.numOfSeq)
     neighbourJoining.setR_I()
     println(neighbourJoining.r_i)
     neighbourJoining.setD_I_J()
@@ -374,7 +383,7 @@ object main{
     println("Nuova matrice da passare alla chiamata ricorsiva")
     println(neighbourJoining.distances)
     println(neighbourJoining.distances.size)
-    println(neighbourJoining.numOfNode)
+    println(neighbourJoining.numOfSeq)
     println("Grafo fino ad ora")
     println(neighbourJoining.graph)
 
@@ -383,10 +392,13 @@ object main{
 
     neighbourJoining.graph += ((neighbourJoining.last_node - 1, neighbourJoining.last_node - 2) -> neighbourJoining.distances(neighbourJoining.last_node - 1, neighbourJoining.last_node - 2))
 
-    println(neighbourJoining.graph)
+    println(neighbourJoining.graph)*/
     /*while (neighbourJoining.distances.size > 4) {
       dist = neighbourJoining.distances
     }*/
+
+    neighbourJoining.NJ()
+    println(neighbourJoining.graph)
     return
 
     //println(min)
