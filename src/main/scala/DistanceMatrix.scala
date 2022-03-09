@@ -1,10 +1,6 @@
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkConf
-import org.apache.spark.rdd.RDD
-import org.apache.commons.io.FileUtils
+import org.apache.spark.{SparkConf, SparkContext}
 
 import java.io._
-import scala.math.min
 
 class FastaReader(val filename: String) extends Iterator[(String, String, String)] {
   private lazy val reader = new BufferedReader(new FileReader(filename))
@@ -127,7 +123,7 @@ class NeighbourJoining {
       n = joinSmallestNodes() //remove updateMatrix here
       updateMatrix(n._1, n._2)
     }
-    graph += ((last_node - 1, last_node - 2) -> distances.filterKeys(k=> k._1!=k._2).head._2)
+    graph += ((distances.filterKeys(k=> k._1<k._2).head._1._1, distances.filterKeys(k=> k._1<k._2).head._1._2) -> distances.filterKeys(k=> k._1<k._2).head._2)
   }
 
 
@@ -151,26 +147,13 @@ class NeighbourJoining {
 
 
   def setR_I(): Unit ={
-    for ((k, v) <- distances) {
-      if(r_i.contains(k._1)) {
-        r_i += (k._1 -> (r_i.getOrElse(k._1, 0.0) + v))
-      } else {
-        r_i += (k._1 -> (0.0 + v))
-      }
-    }
-
-    r_i=r_i.mapValues(x=> x/(numOfSeq - 2))
-
-
+    r_i=distances.groupBy(x=> x._1._1 ).mapValues((x)=>x.foldLeft(0.0)((e, x)=> e+x._2)).mapValues(x=> x/(numOfSeq - 2))
   }
 
 
   def setD_I_J(): Unit ={
-    d_i_j = Map[(Int, Int), Double]()
-    var tmpMatrixDist: Map[(Int, Int), Double] = Map()
-    tmpMatrixDist++=distances
-    val tmpSuperiorMatrix = tmpMatrixDist.filterKeys(k=> k._1>k._2)
-    d_i_j = tmpSuperiorMatrix.transform((k, v) => v - r_i(k._1) - r_i(k._2))
+    val tmpMatrixDist: Map[(Int, Int), Double] = Map()++distances
+    d_i_j = tmpMatrixDist.filterKeys(k=> k._1>k._2).transform((k, v) => v - r_i(k._1) - r_i(k._2))
   }
 
   def joinSmallestNodes(): (Int, Int) ={
@@ -183,26 +166,20 @@ class NeighbourJoining {
     val dist_node2: Double = 0.5 * distances(node_1, node_2) + 0.5 * (r_i(node_2) - r_i(node_1))
     graph += ((node_1, last_node) -> dist_node1)
     graph += ((node_2, last_node) -> dist_node2)
-    last_node = last_node + 1
     (node_1, node_2)
   }
 
   def updateMatrix(node_1: Int, node_2: Int): Unit ={
+    val x = distances.filterKeys(k => k._1 != node_1 && k._1 != node_2)
+      .groupBy((x)=>x._1._1).flatMap(
+      x =>  {
+        val d = (x._2.filter(_._1._2==node_1).head._2 + x._2.filter(_._1._2==node_2).head._2- distances(node_1, node_2))/2;
+        Seq(((x._1, last_node), d),((last_node, x._1), d))
+      })
 
-    var tmpMatrix = distances
-
-    tmpMatrix = tmpMatrix.filterKeys(k => k._1 != node_1 && k._1 != node_2 && k._2 != node_1 && k._2 != node_2)
-    println(distances)
-
-    for ((k, v) <- tmpMatrix){
-      val newVal = (distances(k._1, node_1) + distances(k._1, node_2) - distances(node_1, node_2)) / 2
-      tmpMatrix = tmpMatrix.+((k._1, last_node) -> newVal)
-      tmpMatrix = tmpMatrix.+((last_node, k._1) -> newVal)
-    }
-
-    tmpMatrix = tmpMatrix.+((last_node, last_node) -> 0.0)
-
-    distances = tmpMatrix
+    distances = (distances.filterKeys(k => k._1 != node_1 && k._1 != node_2 && k._2 != node_1 && k._2 != node_2) ++ x) +((last_node, last_node)->0.0)
+    numOfSeq-=1;
+    last_node = last_node + 1
   }
 }
 
