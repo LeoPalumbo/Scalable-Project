@@ -1,3 +1,4 @@
+import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
 import java.io._
@@ -183,6 +184,78 @@ class NeighbourJoining {
   }
 }
 
+class ParNeighbourJoining(sc: SparkContext) {
+
+  var r_i = Map[Int, Double]()
+  var distances : RDD[((Int, Int), Double)]= sc.emptyRDD[((Int, Int), Double)];
+  var d_i_j : RDD[((Int, Int), Double)]= sc.emptyRDD[((Int, Int), Double)];
+  var graph : RDD[((Int, Int), Double)]= sc.emptyRDD[((Int, Int), Double)];
+  //var numOfSeq: Int = 0
+  var numOfNodeTmp : Int = 0
+  var last_node: Int = 0
+
+  def NJ(d: Map[(Int, Int), Double]) : Unit = {
+
+    var r_i = Map[Int, Double]()
+    //var distances : RDD[((Int, Int), Double)]= sc.emptyRDD[((Int, Int), Double)];
+    //var d_i_j : RDD[((Int, Int), Double)]= sc.emptyRDD[((Int, Int), Double)];
+
+    distances ++= (sc.parallelize(d.toSeq).flatMap[((Int, Int), Double)](((x: ((Int, Int), Double))=> Seq[((Int, Int), Double)](((x._1._1, x._1._2), x._2), ((x._1._2, x._1._1), x._2)))))
+    var numOfSeq = distances.max._1._1 + 1
+    numOfNodeTmp = distances.max._1._1 + 1
+    last_node = numOfSeq
+    distances.union(sc.parallelize((0 until numOfSeq)).map((x)=> ((x, x) -> 0.0)))
+
+
+    var n : (Int, Int) = (0, 0)
+    (0 until (numOfSeq - 2)).foreach (i =>{
+
+      r_i=distances.groupBy(x=> x._1._1 ).mapValues((x)=>x.foldLeft(0.0)((e, x)=> e+x._2)).mapValues(x=> x/(numOfSeq-i - 2)).collect().toMap
+      d_i_j = distances.filter(x=> x._1._1>x._1._2).map((x) => (x._1 ,x._2 - r_i(x._1._1) - r_i(x._1._2)))
+
+
+      val min = d_i_j.min()(Ordering[Double].on[((Int, Int),Double)](_._2))
+
+      val node_1 : Int = min._1._1
+      val node_2 : Int = min._1._2
+
+      val dist_node1: Double = 0.5 * distances.lookup((node_1, node_2)).head + 0.5 * (r_i(node_1) - r_i(node_2))
+      val dist_node2: Double = 0.5 * distances.lookup((node_1, node_2)).head + 0.5 * (r_i(node_2) - r_i(node_1))
+      graph ++= sc.parallelize(Seq(((node_1, numOfSeq+i) , dist_node1)))
+      graph ++= sc.parallelize(Seq(((node_2, numOfSeq+i) , dist_node2)))
+
+      val dist = distances.lookup(node_1, node_2).head;
+
+      val x = distances.filter(x => x._1._1 != node_1 && x._1._1 != node_2)
+        .groupBy((x)=>x._1._1).flatMap(
+        x =>  {
+          val d = (x._2.filter(_._1._2==node_1).head._2 + x._2.filter(_._1._2==node_2).head._2- dist)/2;
+          Seq(((x._1, numOfSeq+i), d),((numOfSeq+i, x._1), d))
+        })
+      distances = (distances.filter(x => x._1._1 != node_1 && x._1._1 != node_2 && x._1._2 != node_1 && x._1._2 != node_2) ++ x) ++ sc.parallelize(Seq((last_node, last_node)->0.0))
+    })
+    graph ++=sc.parallelize(Seq((distances.filter(x=> x._1._1<x._1._2).first()._1._1, distances.filter(x=> x._1._1<x._1._2).first()._1._2) -> distances.filter(x=> x._1._1<x._1._2).first()._2))
+  }
+
+
+  def init(): Unit = {
+
+  }
+
+
+  def setR_I(): Unit ={
+  }
+
+
+  def setD_I_J(): Unit ={
+  }
+
+  def joinSmallestNodes() ={
+  }
+
+  def updateMatrix(node_1: Int, node_2: Int): Unit ={
+  }
+}
 
 object main{
   def main(argv: Array[String]){
@@ -249,6 +322,10 @@ object main{
 
 
     neighbourJoining.NJ()
+    val parneighbourJoining = new ParNeighbourJoining(sc)
+    parneighbourJoining.NJ(dist)
+    println(parneighbourJoining.graph.collect().toMap)
     println(neighbourJoining.graph)
- }
+
+  }
 }
