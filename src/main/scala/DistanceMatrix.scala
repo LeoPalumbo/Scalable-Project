@@ -37,7 +37,7 @@ class NucleotideSequence(val filename: String){
   def read(position: Int): Option[Array[Char]]={
     val parsed = new FastaReader(filename)
     val sequences = parsed.map(x=>x._3)
-     sequences.slice(position, position + 1).toList.headOption match{
+    sequences.slice(position, position + 1).toList.headOption match{
       case None => None
       case Some(seq) => Some(seq.toArray)
     }
@@ -237,17 +237,11 @@ class ParNeighbourJoining(sc: SparkContext) {
   }
 }
 
-class Controller(par_matrix: Boolean,
-                 par_joining: Boolean,
-                 metric: String,
-                 filedirs: List[String],
-                 max_seq_per_file: Integer,
-                 sc: SparkContext
-                ) {
-
-  def computeD(f : (Array[Char], Array[Char]) => Double)(x: ((Int, Array[Char]), (Int, Array[Char]))) : ((Int, Int), Double) = {
+object DDD extends Serializable {
+  def computeD(f: (Array[Char], Array[Char]) => Double)(x: ((Int, Array[Char]), (Int, Array[Char]))): ((Int, Int), Double) = {
     ((x._1._1, x._2._1), f(x._1._2, x._2._2))
   }
+
   def computePDist(tuple: ((Int, Array[Char]), (Int, Array[Char]))): ((Int, Int), Double) = computeD(f = (s1, s2) => {
     val ld = new lDistance
     ld.pDistance(s1, s2) match {
@@ -256,12 +250,25 @@ class Controller(par_matrix: Boolean,
     }
   })(tuple)
 
-  def computeSubsDist(tuple: ((Int, Array[Char]), (Int, Array[Char]))): ((Int, Int), Double) = computeD((s1, s2)=>{
+  def computeSubsDist(tuple: ((Int, Array[Char]), (Int, Array[Char]))): ((Int, Int), Double) =  computeD((s1, s2)=>{
     val ld = new lDistance; ld.substitutions(s1, s2)})(tuple)
+}
 
-  def run (): Map[(Int, Int), Double] ={
-    val files: List[String] = filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
-    val data: List[((Array[Char], Array[Char], Array[Char]), Int)] = files.flatMap(x=> new FastaReader(x).toList.take(max_seq_per_file).map(z=> (z._1.toArray, z._2.toArray, z._3.toArray))) zip files.indices
+
+
+class Controller(par_matrix: Boolean,
+                 par_joining: Boolean,
+                 metric: String,
+                 filedirs: Seq[String],
+                 max_seq_per_file: Integer,
+                 sc: SparkContext
+                ) {
+
+  def run ()={
+    val files: Seq[String] = filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
+    val data: Seq[(Array[Char], Array[Char], Array[Char])] = files.flatMap(x=> new FastaReader(x).take(max_seq_per_file).map(z=> (z._1.toArray, z._2.toArray, z._3.toArray)))
+    println(files)
+    println(data.size)
     //data._1 = id
     //data._2 = tag \in id
     //data._3 = sequence
@@ -272,43 +279,67 @@ class Controller(par_matrix: Boolean,
 
     for (i <- data.indices){
       for (j<- 0 until i){
-        pairs = pairs :+ ((i, data(i)._1._3), (j, data(j)._1._3))
+        pairs = pairs :+ ((i, data(i)._3), (j, data(j)._3))
       }
     }
 
     var distances = Map[(Int, Int), Double]()
+    var dist_time : Long = 0
+    var nj_time : Long = 0
+    var graph = Map[(Int, Int), Double]()
 
     if (par_matrix) {
       val ppairs = sc.parallelize(pairs)
       if (metric == "substitutions") {
-        distances = ppairs.map((x: ((Int, Array[Char]), (Int, Array[Char]))) => computeSubsDist(x)).collect().toMap
+        val t0 = System.nanoTime()
+        distances = ppairs.map((x: ((Int, Array[Char]), (Int, Array[Char]))) => DDD.computeSubsDist(x)).collect().toMap
+        val t1 = System.nanoTime()
+        dist_time=(t1 - t0)/1000000
       }
       if (metric == "p") {
-        distances = ppairs.map(x => computePDist(x)).collect().toMap
+        val t0 = System.nanoTime()
+        distances = ppairs.map(x => DDD.computePDist(x)).collect().toMap
+        val t1 = System.nanoTime()
+        dist_time=(t1 - t0)/1000000
       }
     }
     else {
       if (metric == "substitutions") {
-        distances = pairs.map(x => computeSubsDist(x)).toMap
+        val t0 = System.nanoTime()
+        distances = pairs.map(x => DDD.computeSubsDist(x)).toMap
+        val t1 = System.nanoTime()
+        dist_time=(t1 - t0)/1000000
       }
       if (metric == "p") {
-        distances = pairs.map(x => computePDist(x)).toMap
+        val t0 = System.nanoTime()
+        distances = pairs.map(x => DDD.computePDist(x)).toMap
+        val t1 = System.nanoTime()
+        dist_time=(t1 - t0)/1000000
       }
     }
 
-    if (par_joining) {
+    if (!par_joining) {
       val neighbourJoining = new NeighbourJoining()
       neighbourJoining.init(distances)
+      val t0 = System.nanoTime()
       neighbourJoining.NJ()
-      neighbourJoining.graph
+      val t1 = System.nanoTime()
+      nj_time=(t1 - t0)/1000000
+      graph=neighbourJoining.graph
     }
 
     else {
       val parNeighbourJoining = new ParNeighbourJoining(sc)
+      val t0 = System.nanoTime()
       parNeighbourJoining.NJ(distances)
-      parNeighbourJoining.graph.collect().toMap
+      val t1 = System.nanoTime()
+      nj_time=(t1 - t0)/1000000
+      graph=parNeighbourJoining.graph.collect().toMap
     }
-
+    ("dist_time" -> dist_time,
+      "nj_time" -> nj_time,
+      "graph" -> graph,
+      "labels" -> data.map(x=>(x._1, x._2)))
   }
 }
 
@@ -369,7 +400,6 @@ object main{
       }
     })).collect().toMap;
 
-    */
     //println(distances)
     val dist: Map[(Int, Int), Double] = Map((3, 2) -> 14, (3, 1) -> 18, (3, 0) -> 27, (2, 1) -> 12, (2, 0) -> 21, (1, 0) -> 17)
 
@@ -382,6 +412,9 @@ object main{
     parneighbourJoining.NJ(dist)
     println(parneighbourJoining.graph.collect().toMap)
     println(neighbourJoining.graph)
+    */
 
+    val c = new Controller(true, false, "p", Seq("COVID-19_seqLunghe/alpha","COVID-19_seqLunghe/beta","COVID-19_seqLunghe/gamma"), 1, sc)
+    println(c.run())
   }
 }
