@@ -265,10 +265,10 @@ class Controller(par_matrix: Boolean,
                 ) {
 
   def run ()={
-    val files: Seq[String] = filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
+    val files: Seq[String] = List("COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta", "COVID-19_seqLunghe/beta/1646989945496.sequences.fasta", "COVID-19_seqLunghe/gamma/1646990274551.sequences.fasta")//filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
     val data: Seq[(Array[Char], Array[Char], Array[Char])] = files.flatMap(x=> new FastaReader(x).take(max_seq_per_file).map(z=> (z._1.toArray, z._2.toArray, z._3.toArray)))
     println(files)
-    println(data.size)
+  //  println(data.size)
     //data._1 = id
     //data._2 = tag \in id
     //data._3 = sequence
@@ -414,7 +414,7 @@ object main{
     println(neighbourJoining.graph)
     */
 
-    val c = new Controller(true, false, "p", Seq("COVID-19_seqLunghe/alpha","COVID-19_seqLunghe/beta","COVID-19_seqLunghe/gamma"), 1, sc)
+    val c = new Controller(true, false, "p", Seq("COVID-19_seqLunghe/alpha","COVID-19_seqLunghe/beta","COVID-19_seqLunghe/gamma"), 10, sc)
     println(c.run())
   }
 }

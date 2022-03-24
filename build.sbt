@@ -2,9 +2,14 @@ name := "HelloWorldSpark"
 
 version := "1.0"
 
-scalaVersion := "2.11.12"
+scalaVersion := "2.12.10"
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "2.3.2",
-  "org.apache.spark" %% "spark-sql" % "2.3.2"
+  "org.apache.spark" %% "spark-core" % "2.4.8",
+  "org.apache.spark" %% "spark-sql" % "2.4.8"
 )
+
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
+}
