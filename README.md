@@ -3,6 +3,12 @@
 ##BUILD
 To make a build correctly we need to have Scala version >= 12.0.0 .
 
+To use the command *sbt assembly* add the following line in project/plugins.sbt. Create this file if it does not exist.
+```
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "1.2.0")
+resolvers += Resolver.url("bintray-sbt-plugins", url("https://dl.bintray.com/sbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
+```
+Then, run:
 ```bash
 $ sbt assembly
 ```
