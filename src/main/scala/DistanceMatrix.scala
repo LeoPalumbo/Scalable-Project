@@ -265,7 +265,7 @@ class Controller(par_matrix: Boolean,
                 ) {
 
   def run ()={
-    val files: Seq[String] = List("COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta", "COVID-19_seqLunghe/beta/1646989945496.sequences.fasta", "COVID-19_seqLunghe/gamma/1646990274551.sequences.fasta")//filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
+    val files: Seq[String] = filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
     val data: Seq[(Array[Char], Array[Char], Array[Char])] = files.flatMap(x=> new FastaReader(x).take(max_seq_per_file).map(z=> (z._1.toArray, z._2.toArray, z._3.toArray)))
     println(files)
   //  println(data.size)
@@ -290,7 +290,7 @@ class Controller(par_matrix: Boolean,
 
     if (par_matrix) {
       val ppairs = sc.parallelize(pairs)
-      if (metric == "substitutions") {
+      if (metric == "s") {
         val t0 = System.nanoTime()
         distances = ppairs.map((x: ((Int, Array[Char]), (Int, Array[Char]))) => DDD.computeSubsDist(x)).collect().toMap
         val t1 = System.nanoTime()
@@ -304,7 +304,7 @@ class Controller(par_matrix: Boolean,
       }
     }
     else {
-      if (metric == "substitutions") {
+      if (metric == "s") {
         val t0 = System.nanoTime()
         distances = pairs.map(x => DDD.computeSubsDist(x)).toMap
         val t1 = System.nanoTime()
@@ -345,7 +345,7 @@ class Controller(par_matrix: Boolean,
 
 
 object main{
-  def main(argv: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("Phylogenetic Tree").setMaster("local[*]")
     val sc = new SparkContext(conf)
 
@@ -414,7 +414,19 @@ object main{
     println(neighbourJoining.graph)
     */
 
-    val c = new Controller(true, false, "p", Seq("COVID-19_seqLunghe/alpha","COVID-19_seqLunghe/beta","COVID-19_seqLunghe/gamma"), 10, sc)
+    /*
+    val PAR_MATRIX = true
+    val PAR_JOINING = false
+    val METRIC = p
+    val MAX_SEQUENCES_PER_FILE = 10
+    */
+
+    val PAR_MATRIX = args(0).toBoolean
+    val PAR_JOINING = args(1).toBoolean
+    val METRIC = args(2)
+    val MAX_SEQUENCES_PER_FILE = args(3).toInt
+
+    val c = new Controller(PAR_MATRIX, PAR_JOINING, METRIC, Seq("COVID-19_seqLunghe/alpha","COVID-19_seqLunghe/beta","COVID-19_seqLunghe/gamma"), MAX_SEQUENCES_PER_FILE, sc)
     println(c.run())
   }
 }
