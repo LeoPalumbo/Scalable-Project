@@ -24,4 +24,9 @@ $ spark-submit --class main ./target/scala-VERSION/FILE.jar PAR_MATRIX PAR_JOINI
 
 #example of run
 $ spark-submit --class main ./target/scala-2.12/HelloWorldSpark-assembly-1.0.jar true false p 10
+
+#example of run with run.sh
+$ ./src/demo/script/run.sh true false p 3
 ```
+
+
