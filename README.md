@@ -8,6 +8,8 @@ To use the command *sbt assembly* add the following line in project/plugins.sbt.
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "1.2.0")
 resolvers += Resolver.url("bintray-sbt-plugins", url("https://dl.bintray.com/sbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
 ```
+
+Add dataset in *Scalable-Project* directory. The dataset must be: COVID-19_seqLunghe/variante/varianteid.fasta .
 Then, run:
 ```bash
 $ sbt assembly

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-JAR_FILE=./target/scala-2.12/HelloWorldSpark-assembly-1.0.jar
+JAR_FILE=/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/target/scala-2.12/HelloWorldSpark-assembly-1.0.jar
 MAIN_CLASS=main
 PAR_METRICS="$1"
 PAR_JOINING="$2"

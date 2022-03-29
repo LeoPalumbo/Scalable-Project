@@ -267,8 +267,7 @@ class Controller(par_matrix: Boolean,
   def run ()={
     val files: Seq[String] = filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
     val data: Seq[(Array[Char], Array[Char], Array[Char])] = files.flatMap(x=> new FastaReader(x).take(max_seq_per_file).map(z=> (z._1.toArray, z._2.toArray, z._3.toArray)))
-    println(files)
-  //  println(data.size)
+    println(data)
     //data._1 = id
     //data._2 = tag \in id
     //data._3 = sequence
@@ -320,6 +319,7 @@ class Controller(par_matrix: Boolean,
 
     if (!par_joining) {
       val neighbourJoining = new NeighbourJoining()
+      println(distances)
       neighbourJoining.init(distances)
       val t0 = System.nanoTime()
       neighbourJoining.NJ()
@@ -414,19 +414,21 @@ object main{
     println(neighbourJoining.graph)
     */
 
-    /*
-    val PAR_MATRIX = true
+
+    /*val PAR_MATRIX = true
     val PAR_JOINING = false
-    val METRIC = p
-    val MAX_SEQUENCES_PER_FILE = 10
-    */
+    val METRIC = "p"
+    val MAX_SEQUENCES_PER_FILE = 3*/
+    //println(File("COVID-19_seqLunghe/alpha").exists)
+    //val files = new java.io.File("COVID-19_seqLunghe/alpha").listFiles.filter(_.getName.endsWith(".fasta")).map(x=>"COVID-19_seqLunghe/alpha"+"/"+x.getName);
 
     val PAR_MATRIX = args(0).toBoolean
     val PAR_JOINING = args(1).toBoolean
     val METRIC = args(2)
     val MAX_SEQUENCES_PER_FILE = args(3).toInt
-
-    val c = new Controller(PAR_MATRIX, PAR_JOINING, METRIC, Seq("COVID-19_seqLunghe/alpha","COVID-19_seqLunghe/beta","COVID-19_seqLunghe/gamma"), MAX_SEQUENCES_PER_FILE, sc)
+    val path = "/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/COVID-19_seqLunghe"
+    //println(files)
+    val c = new Controller(PAR_MATRIX, PAR_JOINING, METRIC, Seq(path + "/alpha",path + "/beta",path + "/gamma"), MAX_SEQUENCES_PER_FILE, sc)
     println(c.run())
   }
 }
