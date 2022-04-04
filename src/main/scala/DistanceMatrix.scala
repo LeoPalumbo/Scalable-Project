@@ -3,8 +3,30 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 import java.io._
 
-class FastaReader(val filename: String) extends Iterator[(String, String, String)] {
-  private lazy val reader = new BufferedReader(new FileReader(filename))
+
+class Adapter(textFile : Map[Int, String]) {
+  var line_index = 0
+  var num_lines :Int = textFile.maxBy[Int](x => x._1)._1
+  var saved_index = 0
+
+  def ready() = line_index < num_lines
+
+  def readLine(): String= {
+    var line = textFile(line_index)
+    line_index+=1
+    line
+  }
+  def mark(n : Integer){
+    saved_index = line_index
+  }
+  def reset(){
+    line_index = saved_index
+  }
+}
+
+
+class FastaReader(val filename: String, sc : SparkContext) extends Iterator[(String, String, String)] {
+  private lazy val reader = new Adapter(sc.textFile(filename).collect().indices.zip(sc.textFile(filename).collect()).toMap[Int, String])
 
   class FastaReadException(string: String) extends Exception(string)
   def hasNext(): Boolean = reader.ready
@@ -30,17 +52,6 @@ class FastaReader(val filename: String) extends Iterator[(String, String, String
     } while (reader.ready)
     // should never reach this...
     throw new FastaReadException("Error in file " + filename + " (tag=" + tag + ")")
-  }
-}
-
-class NucleotideSequence(val filename: String){
-  def read(position: Int): Option[Array[Char]]={
-    val parsed = new FastaReader(filename)
-    val sequences = parsed.map(x=>x._3)
-    sequences.slice(position, position + 1).toList.headOption match{
-      case None => None
-      case Some(seq) => Some(seq.toArray)
-    }
   }
 }
 
@@ -265,8 +276,9 @@ class Controller(par_matrix: Boolean,
                 ) {
 
   def run ()={
-    val files: Seq[String] = filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
-    val data: Seq[(Array[Char], Array[Char], Array[Char])] = files.flatMap(x=> new FastaReader(x).take(max_seq_per_file).map(z=> (z._1.toArray, z._2.toArray, z._3.toArray)))
+    //println(filedirs)
+    //val files: Seq[String] = filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
+    val data: Seq[(Array[Char], Array[Char], Array[Char])] = filedirs.flatMap(x=> new FastaReader(x, sc).take(max_seq_per_file).map(z=> (z._1.toArray, z._2.toArray, z._3.toArray)))
     println(data)
     //data._1 = id
     //data._2 = tag \in id
@@ -426,9 +438,14 @@ object main{
     val PAR_JOINING = args(1).toBoolean
     val METRIC = args(2)
     val MAX_SEQUENCES_PER_FILE = args(3).toInt
-    val path = "/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/COVID-19_seqLunghe"
+    //val path = "/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/COVID-19_seqLunghe"
+    val ALPHA = args(4)
+    val BETA = args(5)
+    val GAMMA = args(6)
+    //println(sc.textFile("gs://scala-project-data-bucket/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta"))
+    //println(sc.textFile("/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta").first())
     //println(files)
-    val c = new Controller(PAR_MATRIX, PAR_JOINING, METRIC, Seq(path + "/alpha",path + "/beta",path + "/gamma"), MAX_SEQUENCES_PER_FILE, sc)
+    val c = new Controller(PAR_MATRIX, PAR_JOINING, METRIC, Seq(ALPHA, BETA, GAMMA), MAX_SEQUENCES_PER_FILE, sc)
     println(c.run())
   }
 }
