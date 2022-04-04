@@ -29,6 +29,13 @@ $ spark-submit --class main ./target/scala-2.12/HelloWorldSpark-assembly-1.0.jar
 
 #example of run with run.sh
 $ ./src/demo/script/run.sh true false p 3
+
+#run locally with path
+$ spark-submit --class main ./target/scala-2.12/HelloWorldSpark-assembly-1.0.jar true false p 2 /Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta /Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/COVID-19_seqLunghe/beta/1646989945496.sequences.fasta /Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/COVID-19_seqLunghe/gamma/1646990274551.sequences.fasta
+$ spark-submit --class main ./target/scala-2.12/HelloWorldSpark-assembly-1.0.jar true false p 2 https://storage.cloud.google.com/scala-project-data-bucket/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta https://storage.cloud.google.com/scala-project-data-bucket/COVID-19_seqLunghe/beta/1646989945496.sequences.fasta https://storage.cloud.google.com/scala-project-data-bucket/COVID-19_seqLunghe/gamma/1646990274551.sequences.fasta
+$ spark-submit --class main ./target/scala-2.12/HelloWorldSpark-assembly-1.0.jar true false p 2 https://console.cloud.google.com/storage/browser/scala-project-data-bucket/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta https://console.cloud.google.com/storage/browser/scala-project-data-bucket/COVID-19_seqLunghe/beta/1646989945496.sequences.fasta https://console.cloud.google.com/storage/browser/scala-project-data-bucket/COVID-19_seqLunghe/gamma/1646990274551.sequences.fasta
+$ spark-submit --class main ./target/scala-2.12/HelloWorldSpark-assembly-1.0.jar true false p 2 gs://scala-project-data-bucket/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta gs://scala-project-data-bucket/COVID-19_seqLunghe/beta/1646989945496.sequences.fasta gs://scala-project-data-bucket/COVID-19_seqLunghe/gamma/1646990274551.sequences.fasta
+
 ```
 
 
