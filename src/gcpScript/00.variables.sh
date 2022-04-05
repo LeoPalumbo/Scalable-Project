@@ -27,10 +27,10 @@ DATAPROC_CLUSTER_REGION=europe-west1
 DATAPROC_CLUSTER_ZONE=europe-west1-d
 
 #ARGS
-PAR_METRICS=true
-PAR_JOINING=false
-METRIC=p
-MAX_SEQUENCES_PER_FILE=2
+#PAR_METRICS=true
+#PAR_JOINING=false
+#METRIC=p
+#MAX_SEQUENCES_PER_FILE=2
 #DATA_PATH=https://console.cloud.google.com/storage/browser/${GCS_BUCKET_NAME}/COVID-19_seqLunghe
 #DATA_PATH=https://storage.cloud.google.com/scala-project-data-bucket/COVID-19_seqLunghe
 DATA_PATH=gs://scala-project-data-bucket/COVID-19_seqLunghe

@@ -279,7 +279,6 @@ class Controller(par_matrix: Boolean,
     //println(filedirs)
     //val files: Seq[String] = filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
     val data: Seq[(Array[Char], Array[Char], Array[Char])] = filedirs.flatMap(x=> new FastaReader(x, sc).take(max_seq_per_file).map(z=> (z._1.toArray, z._2.toArray, z._3.toArray)))
-    println(data)
     //data._1 = id
     //data._2 = tag \in id
     //data._3 = sequence
@@ -442,10 +441,15 @@ object main{
     val ALPHA = args(4)
     val BETA = args(5)
     val GAMMA = args(6)
+    val DELTA = args(7)
+    val GH_490R = args(8)
+    val LAMBDA = args(9)
+    val MU = args(10)
+    val OMICRON = args(11)
     //println(sc.textFile("gs://scala-project-data-bucket/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta"))
     //println(sc.textFile("/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta").first())
     //println(files)
-    val c = new Controller(PAR_MATRIX, PAR_JOINING, METRIC, Seq(ALPHA, BETA, GAMMA), MAX_SEQUENCES_PER_FILE, sc)
+    val c = new Controller(PAR_MATRIX, PAR_JOINING, METRIC, Seq(ALPHA, BETA, GAMMA, DELTA, GH_490R, LAMBDA, MU, OMICRON), MAX_SEQUENCES_PER_FILE, sc)
     println(c.run())
   }
 }
