@@ -1,8 +1,9 @@
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import org.json4s._
 
 import java.io._
-
+import scala.collection.immutable
 
 class Adapter(textFile : Map[Int, String]) {
   var line_index = 0
@@ -265,7 +266,14 @@ object DDD extends Serializable {
     val ld = new lDistance; ld.substitutions(s1, s2)})(tuple)
 }
 
-
+class DNA_sequence(var id: Array[Char], var data_seq: Array[Char], var group: String) {
+  def getSequence() : Array[Char] = data_seq
+  def getGroup() : String = group
+  override def toString(): String = {
+    //DNA_sequence_stringify(this.id.mkString(""), this.group)
+    s"""{"id": "${this.id.mkString("")}", "group": "${this.group}"}"""
+  }
+}
 
 class Controller(par_matrix: Boolean,
                  par_joining: Boolean,
@@ -275,21 +283,56 @@ class Controller(par_matrix: Boolean,
                  sc: SparkContext
                 ) {
 
+  def getGroup(s:String): String = {
+    s match {
+      case s if s.contains("alpha") => "alpha"
+      case s if s.contains("beta") => "beta"
+      case s if s.contains("delta") => "delta"
+      case s if s.contains("gamma") => "gamma"
+      case s if s.contains("GH_490R") => "GH_490R"
+      case s if s.contains("lambda") => "lambda"
+      case s if s.contains("mu") => "mu"
+      case s if s.contains("omicron") => "omicron"
+    }
+  }
+
+  def graph_stringify(DNA_seq: Seq[DNA_sequence], graph: Map[(Int, Int), Double]): immutable.Iterable[String] = {
+    graph.map(x => {
+      var source = if(x._1._1 < DNA_seq.length) DNA_seq(x._1._1).id.mkString("") else x._1._1
+      var target = if(x._1._2 < DNA_seq.length) DNA_seq(x._1._2).id.mkString("") else x._1._2
+      var value = x._2
+
+      s"""{"source": "${source}","target": "${target}","value": ${value}}"""
+    })
+  }
+
+  def graph_updateExtraNode(graph: Map[(Int, Int), Double], length: Int) = {
+    graph.filter(x => x._1._2 >= length).groupBy(_._1._2).map(z => s"""{"id": "${z._1.toString()}", "group": "extra"}""")
+  }
+
   def run ()={
     //println(filedirs)
     //val files: Seq[String] = filedirs.flatMap(z => new java.io.File(z).listFiles.filter(_.getName.endsWith(".fasta")).map(x=>z+"/"+x.getName))
-    val data: Seq[(Array[Char], Array[Char], Array[Char])] = filedirs.flatMap(x=> new FastaReader(x, sc).take(max_seq_per_file).map(z=> (z._1.toArray, z._2.toArray, z._3.toArray)))
+    //val data: Seq[(Array[Char], Array[Char], Array[Char], String)] = filedirs.flatMap(x=> new FastaReader(x, sc).take(max_seq_per_file).map(z=>  (z._1.toArray, z._2.toArray, z._3.toArray, getGroup(x))))
     //data._1 = id
     //data._2 = tag \in id
     //data._3 = sequence
+
+    val DNA_seq: Seq[DNA_sequence] = filedirs.flatMap(x => new FastaReader(x, sc).take(max_seq_per_file).map(z => {
+
+      new DNA_sequence(
+        z._1.toArray,
+        z._3.toArray,
+        getGroup(x))
+    }))
 
     //val sequences = files.map((x)=> new NucleotideSequence(x).read(0))
 
     var pairs : List[((Int, Array[Char]), (Int, Array[Char]))] = List[((Int, Array[Char]), (Int, Array[Char]))]()
 
-    for (i <- data.indices){
+    for (i <- DNA_seq.indices){
       for (j<- 0 until i){
-        pairs = pairs :+ ((i, data(i)._3), (j, data(j)._3))
+        pairs = pairs :+ ((i, DNA_seq(i).getSequence()), (j, DNA_seq(j).getSequence()))
       }
     }
 
@@ -347,18 +390,60 @@ class Controller(par_matrix: Boolean,
       nj_time=(t1 - t0)/1000000
       graph=parNeighbourJoining.graph.collect().toMap
     }
+
+    println("\n==========================================================")
+    DNA_seq.foreach(e => println(e.toString()))
+    graph_updateExtraNode(graph, DNA_seq.length).foreach(e => println(e))
+    println("GRAPH==========================================================")
+    graph_stringify(DNA_seq, graph).foreach(e => println(e))
+    println("\n==========================================================")
+
+
     ("dist_time" -> dist_time,
       "nj_time" -> nj_time,
       "graph" -> graph,
-      "labels" -> data.map(x=>(x._1, x._2)))
+      "labels" -> DNA_seq.indices.zip(DNA_seq.map(x=>x.getGroup())))
   }
 }
 
 
 object main{
+
+  def aux_f_json_1(seq: Seq[((Int, Int), Double)]): String = {
+    var string: String = "[ "
+    string+= seq.map(x=> "{ \"source\": "+x._1._1+", \n"+"\"target\": "+x._1._2+", \n"+"\"value\": "+x._2+"\n}").mkString(",")
+    string+=" ]";
+    string
+  }
+
+  def aux_f_json_2(seq: Seq[(Int, String)]): String = {
+    var string: String = "[ "
+    string+= seq.map(x=> "{ \"graph_index\": "+x._1+", \n"+"\"group\": \""+x._2+"\"\n}").mkString(",")
+    string+=" ]";
+    string
+  }
+
+  def createJson(m:((String, Long), (String, Long), (String, Map[(Int, Int), Double]), (String, Seq[(Int, String)]))): String = {
+    var string="{\n";
+    string += ('"'+m._1._1+'"')      +     ':'    + m._1._2     +  ','+  '\n';
+    string += ('"'+m._2._1+'"')      +     ':'    + m._2._2     +  ','+  '\n';
+    string += ('"'+m._3._1+'"')      +     ':'    + aux_f_json_1(m._3._2.toSeq)     +  ','+  '\n';
+    string += ('"'+m._4._1+'"')      +     ':'    + aux_f_json_2(m._4._2)+  '\n';
+    string += "}";
+    string
+  }
+
+  def saveTextFile(text: String, filename: String, sc: SparkContext): Unit = {
+    val file = new File(filename)
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(text)
+    bw.close()
+
+  }
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("Phylogenetic Tree").setMaster("local[*]")
     val sc = new SparkContext(conf)
+
 
     /*val files = new java.io.File("dataset").listFiles.filter(_.getName.endsWith(".fasta")).map((x)=>"dataset/"+x.getName)
 
@@ -446,10 +531,15 @@ object main{
     val LAMBDA = args(9)
     val MU = args(10)
     val OMICRON = args(11)
+    val TEST_NAME = args(12)
     //println(sc.textFile("gs://scala-project-data-bucket/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta"))
     //println(sc.textFile("/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/COVID-19_seqLunghe/alpha/1646989737406.sequences.fasta").first())
     //println(files)
     val c = new Controller(PAR_MATRIX, PAR_JOINING, METRIC, Seq(ALPHA, BETA, GAMMA, DELTA, GH_490R, LAMBDA, MU, OMICRON), MAX_SEQUENCES_PER_FILE, sc)
-    println(c.run())
+    val m = c.run()
+
+    val json_s: String = createJson(m);
+//  saveTextFile("{}", "gs://scala-project-data-bucket/output/output.json", sc)
+    sc.parallelize(Seq(json_s)).coalesce(1, true).saveAsTextFile("/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/output/" + TEST_NAME + ".json");
   }
 }
