@@ -399,10 +399,15 @@ class Controller(par_matrix: Boolean,
     println("\n==========================================================")
 
 
-    ("dist_time" -> dist_time,
+    (
+      "dist_time" -> dist_time,
       "nj_time" -> nj_time,
       "graph" -> graph,
-      "labels" -> DNA_seq.indices.zip(DNA_seq.map(x=>x.getGroup())))
+      "labels" -> DNA_seq.indices.zip(DNA_seq.map(x=>x.getGroup())),
+      "nodes" -> DNA_seq,
+      "nodes_extra" -> graph_updateExtraNode(graph, DNA_seq.length),
+      "links" -> graph_stringify(DNA_seq, graph)
+    )
   }
 }
 
@@ -430,6 +435,34 @@ object main{
     string += ('"'+m._3._1+'"')      +     ':'    + aux_f_json_1(m._3._2.toSeq)     +  ','+  '\n';
     string += ('"'+m._4._1+'"')      +     ':'    + aux_f_json_2(m._4._2)+  '\n';
     string += "}";
+    string
+  }
+
+  def createJson2(m:((String, Long), //dist_time 1
+    (String, Long), //nj_time 2
+    (String, Map[(Int, Int), Double]), //graph 3
+    (String, IndexedSeq[(Int, String)]), //labels 4
+    (String, Seq[DNA_sequence]), // nodes_group 5
+    (String, Iterable[String]), //nodes_extra 6
+    (String, Iterable[String]) //links 7
+    )): String = {
+
+    var string="{\n";
+    //add dist_time
+    string += ('"'+m._1._1+'"') + ':' + m._1._2 + ',' + '\n';
+    //add nj_time
+    string += ('"'+m._2._1+'"') + ':' + m._2._2 + ',' + '\n';
+    //add nodes and extra nodes
+    string += ('"'+m._5._1+'"') + ":["; //"nodes":[
+    m._5._2.foreach(e => string += e + "," +  '\n');
+    m._6._2.foreach(e => string += e + "," +  '\n');
+    string += "]"
+    //add links
+    string += ('"'+m._7._1+'"') + ":["; //"links":[
+    m._7._2.foreach(e => string += e + "," +  '\n');
+    string += "]"
+    string += "}";
+
     string
   }
 
@@ -538,7 +571,10 @@ object main{
     val c = new Controller(PAR_MATRIX, PAR_JOINING, METRIC, Seq(ALPHA, BETA, GAMMA, DELTA, GH_490R, LAMBDA, MU, OMICRON), MAX_SEQUENCES_PER_FILE, sc)
     val m = c.run()
 
-    val json_s: String = createJson(m);
+    //val json_s: String = createJson(m);
+    val json_s: String = createJson2(m);
+
+
 //  saveTextFile("{}", "gs://scala-project-data-bucket/output/output.json", sc)
     sc.parallelize(Seq(json_s)).coalesce(1, true).saveAsTextFile("/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/output/" + TEST_NAME + ".json");
   }
