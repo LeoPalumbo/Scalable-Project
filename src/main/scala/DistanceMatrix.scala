@@ -1,6 +1,5 @@
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import org.json4s._
 
 import java.io._
 import scala.collection.immutable
@@ -203,8 +202,6 @@ class ParNeighbourJoining(sc: SparkContext) {
   var d_i_j : RDD[((Int, Int), Double)]= sc.emptyRDD[((Int, Int), Double)]
   var graph : RDD[((Int, Int), Double)]= sc.emptyRDD[((Int, Int), Double)]
   //var numOfSeq: Int = 0
-  var numOfNodeTmp : Int = 0
-  var last_node: Int = 0
 
   def NJ(d: Map[(Int, Int), Double]) : Unit = {
 
@@ -214,8 +211,6 @@ class ParNeighbourJoining(sc: SparkContext) {
 
     distances ++= sc.parallelize(d.toSeq).flatMap[((Int, Int), Double)]((x: ((Int, Int), Double))=> Seq[((Int, Int), Double)](((x._1._1, x._1._2), x._2), ((x._1._2, x._1._1), x._2)))
     val numOfSeq = distances.max._1._1 + 1
-    numOfNodeTmp = distances.max._1._1 + 1
-    last_node = numOfSeq
     distances.union(sc.parallelize(0 until numOfSeq).map(x=> (x, x) -> 0.0))
 
 
@@ -243,7 +238,7 @@ class ParNeighbourJoining(sc: SparkContext) {
           val d = (x._2.filter(_._1._2==node_1).head._2 + x._2.filter(_._1._2==node_2).head._2- dist)/2
           Seq(((x._1, numOfSeq+i), d),((numOfSeq+i, x._1), d))
         })
-      distances = (distances.filter(x => x._1._1 != node_1 && x._1._1 != node_2 && x._1._2 != node_1 && x._1._2 != node_2) ++ x) ++ sc.parallelize(Seq((last_node, last_node)->0.0))
+      distances = (distances.filter(x => x._1._1 != node_1 && x._1._1 != node_2 && x._1._2 != node_1 && x._1._2 != node_2) ++ x) ++ sc.parallelize(Seq((numOfSeq+i, numOfSeq+i)->0.0))
     })
     graph ++=sc.parallelize(Seq((distances.filter(x=> x._1._1<x._1._2).first()._1._1, distances.filter(x=> x._1._1<x._1._2).first()._1._2) -> distances.filter(x=> x._1._1<x._1._2).first()._2))
   }
@@ -576,6 +571,6 @@ object main{
 
 
 //  saveTextFile("{}", "gs://scala-project-data-bucket/output/output.json", sc)
-    sc.parallelize(Seq(json_s)).coalesce(1, true).saveAsTextFile("/Users/leonardopiopalumbo/Desktop/Università/Scalable-Project/output/" + TEST_NAME + ".json");
+    sc.parallelize(Seq(json_s)).coalesce(1, true).saveAsTextFile("./" + TEST_NAME + ".json");
   }
 }
