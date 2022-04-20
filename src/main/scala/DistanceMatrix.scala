@@ -448,10 +448,10 @@ object main{
     //add nj_time
     string += ('"'+m._2._1+'"') + ':' + m._2._2 + ',' + '\n';
     //add nodes and extra nodes
-    string += ('"'+m._5._1+'"') + ":["; //"nodes":[
-    m._5._2.foreach(e => string += e + "," +  '\n');
+    string += ('"'+m._5._1+'"') + ":[\n"; //"nodes":[
+    m._5._2.foreach(e => string += e.toString() + "," +  '\n');
     m._6._2.foreach(e => string += e + "," +  '\n');
-    string += "]"
+    string += "],\n"
     //add links
     string += ('"'+m._7._1+'"') + ":["; //"links":[
     m._7._2.foreach(e => string += e + "," +  '\n');
