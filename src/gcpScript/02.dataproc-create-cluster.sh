@@ -3,5 +3,5 @@
 . 00.variables.sh
 
 ./90.log-time.sh "STARTING CLUSTER '${DATAPROC_CLUSTER_NAME}' ..."
-~/google-cloud-sdk/bin/gcloud dataproc clusters create ${DATAPROC_CLUSTER_NAME} --region ${DATAPROC_CLUSTER_REGION} --zone ${DATAPROC_CLUSTER_ZONE} --scopes storage-rw
+~/google-cloud-sdk/bin/gcloud dataproc clusters create ${DATAPROC_CLUSTER_NAME} --region ${DATAPROC_CLUSTER_REGION} --zone ${DATAPROC_CLUSTER_ZONE} --scopes storage-rw --num-workers=3
 ./90.log-time.sh "CLUSTER '${DATAPROC_CLUSTER_NAME}' STARTED!"
